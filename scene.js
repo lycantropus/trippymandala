@@ -1,14 +1,9 @@
-var bg, titleLabel, descriptionLabel, fpsLabel;
-var mandalas = [];
+let mandalas = [];
 
 function createSceneElements() {
-	createMandala();
+  createMandala();
 }
 
 function updateSceneElements() {
-
-	updateMandalas();
+  updateMandalas();
 }
-
-
-

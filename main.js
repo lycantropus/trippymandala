@@ -1,32 +1,34 @@
-var canvas;
-var stage;
-var context;
+let canvas, context, stage;
+let isPaused = false;
+
 function init() {
-	// resize event listener
-	window.addEventListener('resize', resize, false);
+  canvas = document.getElementById("canvas");
+  context = canvas.getContext("2d");
+  stage = new createjs.Stage(canvas);
 
-	// create a new stage and point it at our canvas:
-	canvas = document.getElementById('canvas');
-	stage = new createjs.Stage(canvas);
-	context = canvas.getContext('2d');
-	createSceneElements();
-	
-	resize();
+  window.addEventListener("resize", resizeCanvas);
+  window.addEventListener("keydown", handleKeyDown);
 
-	// Ticker
-	createjs.Ticker.setFPS(60);
-	createjs.Ticker.addEventListener('tick', tick);
+  resizeCanvas();
+  createSceneElements();
 
+  createjs.Ticker.framerate = 60;
+  createjs.Ticker.addEventListener("tick", onTick);
 }
 
-
-function tick(event) {
-	updateSceneElements();
+function onTick() {
+  if (isPaused) return;
+  updateSceneElements();
 }
 
-function resize() { 
-	canvas.width = window.innerWidth;
-	canvas.height = window.innerHeight;
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  updateSceneElements();
+}
 
-	updateSceneElements();
+function handleKeyDown(e) {
+  if (e.code === "Space") {
+    isPaused = !isPaused;
+  }
 }
