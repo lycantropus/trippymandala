@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+	<title>Mandala</title>
+	
+	<meta charset="utf-8">
+
+	<link rel="stylesheet" type="text/css" href="styles.css">
+
+	<link href='https://fonts.googleapis.com/css?family=Playfair+Display' rel='stylesheet' type='text/css'>
+</head>
+<body onload="init();">
+
+
+	<div style="text-align:center; margin-bottom:10px;">
+		<button id="pauseBtn">Pause</button>
+		<button id="resumeBtn" style="display:none;">Resume</button>
+	</div>
+  <style>
+	html, body {
+	  height: 100%;
+	  margin: 0;
+	  padding: 0;
+	}
+	#frame-container {
+	  display: flex;
+	  flex-direction: row;
+	  justify-content: center;
+	  align-items: center;
+	  width: 100vw;
+	  height: calc(100vh - 60px); /* leave space for controls */
+	  min-height: 0;
+	}
+	#heuristic-container.heuristic-left {
+	  display: flex;
+	  flex-direction: column;
+	  justify-content: center;
+	  align-items: flex-end;
+	  min-width: 180px;
+	  max-width: 260px;
+	  margin-right: 32px;
+	  height: 80vh;
+	  position: relative;
+	}
+	#heuristic-value, #heuristic-reasons {
+	  text-align: right;
+	  word-break: break-word;
+	}
+	#mandala-frame {
+	  border: 3px solid #222;
+	  background: #fff;
+	  display: flex;
+	  justify-content: center;
+	  align-items: center;
+	  aspect-ratio: 1 / 1;
+	  width: 100vmin;
+	  height: 100vmin;
+	  max-width: 100vw;
+	  max-height: calc(100vh - 60px);
+	  box-sizing: border-box;
+	}
+	#canvas {
+	  display: block;
+	  width: 100%;
+	  height: 100%;
+	}
+  </style>
+  <div id="frame-container">
+	<div id="heuristic-container" class="heuristic-left">
+	  <div id="heuristic-value" style="color: #333; margin-bottom: 6px; font-size: 1.1em;"></div>
+	  <div id="heuristic-reasons" style="color: #666; font-size: 0.98em;"></div>
+	</div>
+	<div id="mandala-frame">
+	  <canvas id="canvas"></canvas>
+	</div>
+  </div>
+	<div id="error-message" style="color: red; text-align: center; margin-top: 10px; display: none;"></div>
+
+	<script src="https://code.createjs.com/createjs-2015.11.26.min.js"></script>
+
+	<script src="mandala.js"></script>
+	<script src="scene.js"></script>
+	<script src="main.js"></script>
+</body>
+</html>

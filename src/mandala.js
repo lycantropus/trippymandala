@@ -83,7 +83,7 @@ class BezierShape {
   drawContour() {
     const canvasW = canvas.width / 2;
     const canvasH = canvas.height / 4;
-    const contourSteps = 8;
+    const contourSteps = 6; // Moderate complexity
 
     for (let i = 0; i < this.segments; i++) {
       const rotation = (i / this.segments) * 360 - 90;
@@ -117,7 +117,7 @@ class BezierShape {
           );
 
           context.strokeStyle = '#000';
-          context.lineWidth = this.lineWidth * 3;
+          context.lineWidth = this.lineWidth;
           context.stroke();
         }
       }
@@ -133,37 +133,37 @@ class BezierShape {
     for (let i = 0; i < this.segments; i++) {
       const rotation = (i / this.segments) * 360 - 90;
 
-      context.save();
-      context.translate(canvas.width / 2, canvas.height / 2);
-      context.rotate(rotation * Math.PI / 180);
-      context.scale(this.scale, this.scale);
+      // For each symmetry: normal, x-mirror, y-mirror, xy-mirror
+      const symmetries = [
+        [1, 1],   // normal
+        [-1, 1],  // mirror x
+        [1, -1],  // mirror y
+        [-1, -1]  // mirror both
+      ];
 
-      for (let n = 0; n < 2; n++) {
-        const isFlipped = i % this.flip;
-        let coords = this.getCoordinates(canvasW, canvasH, isFlipped ? 1 : 0, false, n % 2 === 0 ? 1 : -1);
-        if (isFlipped) coords = this.swapBezierCoords(coords);
+      for (const [sx, sy] of symmetries) {
+        context.save();
+        context.translate(canvas.width / 2, canvas.height / 2);
+        context.rotate(rotation * Math.PI / 180);
+        context.scale(this.scale * sx, this.scale * sy);
 
-        context.beginPath();
-        context.moveTo(coords[0], coords[1]);
-        context.bezierCurveTo(coords[2], coords[3], coords[4], coords[5], coords[6], coords[7]);
+        for (let n = 0; n < 2; n++) {
+          const isFlipped = i % this.flip;
+          let coords = this.getCoordinates(canvasW, canvasH, isFlipped ? 1 : 0, false, n % 2 === 0 ? 1 : -1);
+          if (isFlipped) coords = this.swapBezierCoords(coords);
 
-        if (this.brush.on && !isMask) {
-          let bCoords = this.getCoordinates(canvasW, canvasH, isFlipped ? 1 : 0, true, n % 2 === 0 ? 1 : -1);
-          if (isFlipped) bCoords = this.swapBezierCoords(bCoords);
+          context.beginPath();
+          context.moveTo(coords[0], coords[1]);
+          context.bezierCurveTo(coords[2], coords[3], coords[4], coords[5], coords[6], coords[7]);
 
-          context.moveTo(bCoords[6], bCoords[7]);
-          context.bezierCurveTo(bCoords[4], bCoords[5], bCoords[2], bCoords[3], bCoords[0], bCoords[1]);
-          context.fillStyle = '#fff';
-          context.fill();
+          context.lineWidth = this.lineWidth;
+          context.lineCap = 'round';
+          context.strokeStyle = 'black';
+          context.stroke();
         }
 
-        context.lineWidth = this.lineWidth;
-        context.lineCap = 'round';
-        context.strokeStyle = 'black';
-        context.stroke();
+        context.restore();
       }
-
-      context.restore();
     }
   }
 
@@ -184,11 +184,40 @@ function getRandomValue(scale, offset) {
 }
 
 function createMandala() {
+  // Allow control points and endpoints to go off the frame for more dynamic mandalas
+  const lineWidth = 2; // Fixed width for all lines
+  const sx = 0;
+  const sy = 0;
+  // Bias control points toward (0.22, 0.99) and (0.85, -0.36) for more 'great' mandalas
+  const c1x = 0.22 + (Math.random() - 0.5) * 0.25; // Range: ~0.1 to 0.35
+  const c1y = 0.99 + (Math.random() - 0.5) * 0.25; // Range: ~0.87 to 1.12
+  let c2x = 0.85 + (Math.random() - 0.5) * 0.3;   // Range: ~0.7 to 1.0
+  let c2y = -0.36 + (Math.random() - 0.5) * 0.3;  // Range: ~-0.51 to -0.21
+  // Add a little extra variety, but keep close to the target
+  if (Math.abs(c2x - 0.85) < 0.08) c2x += (Math.random() - 0.5) * 0.08;
+  if (Math.abs(c2y + 0.36) < 0.08) c2y += (Math.random() - 0.5) * 0.08;
+  // End point can also go off-frame
+  const ex = 0.8 + Math.random() * 0.8; // Range: 0.8 to 1.6
+  const ey = -0.3 + Math.random() * 0.6; // Range: -0.3 to 0.3
+  const ox = 0;
+  const oy = 0;
+  // Use 6, 8, 10, or 12 segments for better colorability
+  const segOptions = [6, 8, 10, 12];
+  const segs = segOptions[Math.floor(Math.random() * segOptions.length)];
+  const flip = 1;
+  // Bias scale toward 1.0 (moderate size)
+  const scale = 0.97 + Math.random() * 0.11;
+  const brushOn = false; // brush off since fill is removed
+  const bc1y = 1.01 + Math.random() * 0.03;
+  const bc1x = 1.01 + Math.random() * 0.03;
+  const bc2x = 1.01 + Math.random() * 0.03;
+  const bc2y = 0.95 + Math.random() * 0.05;
+
   const shape = new BezierShape(
-    1, 0, 0, 0.25, 0.5, 0.75, -1, 1, 0, 0, 0,
-    8, 1, 1, true, 1.13, 1.07, 1.18, 0.62
+    lineWidth, sx, sy, c1x, c1y, c2x, c2y, ex, ey, ox, oy,
+    segs, flip, scale, brushOn, bc1y, bc1x, bc2x, bc2y
   );
-  shape.random_gen?.(); // Optional chaining, in case random_gen is defined later
+  shape.random_gen?.();
   mandalas.push(shape);
 }
 
