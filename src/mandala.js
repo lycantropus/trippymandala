@@ -57,19 +57,7 @@ class BezierShape {
           context.strokeStyle = 'black';
           context.lineWidth = 1.5;
           context.stroke();
-          // Debug: draw a dot at the centroid of the filled region
-          const cx = (coords[0] + coords[6]) / 2 - regionCanvasW;
-          const cy = (coords[1] + coords[7]) / 2 - regionCanvasH;
-          context.beginPath();
-          context.arc(cx, cy, 4, 0, 2 * Math.PI);
-          context.fillStyle = color.replace(/, 0\.35\)/, ', 0.85)');
-          context.fill();
-          filledCount++;
           context.restore();
-    // Log the number of filled regions for debug
-    if (window && window.console) {
-      console.log('Filled regions this frame:', filledCount);
-    }
         }
       }
     }
