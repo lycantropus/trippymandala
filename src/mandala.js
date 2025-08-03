@@ -14,6 +14,114 @@ const SVG_FOOTER = "</svg>";
 let svgContent = "";
 
 class BezierShape {
+  // Draw colored overlays for each region using the same transforms as the main drawing
+  drawColoredRegions(context, regionColors, samplePoints = 32) {
+    if (!context || !regionColors || !regionColors.length) return;
+    const segs = this.segments;
+    const canvasW = canvas.width / 2;
+    const canvasH = canvas.height / 4;
+    // Use the same symmetry logic as renderSegments
+    // For each visible region, use the same transform/flip logic as the main Bezier drawing
+    const regionCanvasW = canvas.width / 2;
+    const regionCanvasH = canvas.height / 4;
+    let filledCount = 0;
+    for (let i = 0; i < segs; i++) {
+      const rotation = (i / segs) * 360 - 90;
+      const symmetries = [
+        [1, 1],   // normal
+        [-1, 1],  // mirror x
+        [1, -1],  // mirror y
+        [-1, -1]  // mirror both
+      ];
+      for (const [sx, sy] of symmetries) {
+        for (let n = 0; n < 2; n++) {
+          const isFlipped = i % this.flip;
+          let coords = this.getCoordinates(regionCanvasW, regionCanvasH, isFlipped ? 1 : 0, false, n % 2 === 0 ? 1 : -1);
+          if (isFlipped) coords = this.swapBezierCoords(coords);
+          context.save();
+          context.translate(canvas.width / 2, canvas.height / 2);
+          context.rotate(rotation * Math.PI / 180);
+          context.scale(this.scale * sx, this.scale * sy);
+          context.beginPath();
+          context.moveTo(coords[0] - regionCanvasW, coords[1] - regionCanvasH);
+          context.bezierCurveTo(
+            coords[2] - regionCanvasW, coords[3] - regionCanvasH,
+            coords[4] - regionCanvasW, coords[5] - regionCanvasH,
+            coords[6] - regionCanvasW, coords[7] - regionCanvasH
+          );
+          // Make overlays more transparent (alpha 0.18)
+          let color = regionColors[i];
+          color = color.replace(/,\s*0\.[0-9]+\)/, ', 0.35)');
+          context.fillStyle = color;
+          context.fill();
+          context.strokeStyle = 'black';
+          context.lineWidth = 1.5;
+          context.stroke();
+          // Debug: draw a dot at the centroid of the filled region
+          const cx = (coords[0] + coords[6]) / 2 - regionCanvasW;
+          const cy = (coords[1] + coords[7]) / 2 - regionCanvasH;
+          context.beginPath();
+          context.arc(cx, cy, 4, 0, 2 * Math.PI);
+          context.fillStyle = color.replace(/, 0\.35\)/, ', 0.85)');
+          context.fill();
+          filledCount++;
+          context.restore();
+    // Log the number of filled regions for debug
+    if (window && window.console) {
+      console.log('Filled regions this frame:', filledCount);
+    }
+        }
+      }
+    }
+    // Draw black stroke for all visible regions (all symmetries)
+    for (let i = 0; i < segs; i++) {
+      const rotation = (i / segs) * 360 - 90;
+      const symmetries = [
+        [1, 1],   // normal
+        [-1, 1],  // mirror x
+        [1, -1],  // mirror y
+        [-1, -1]  // mirror both
+      ];
+      for (const [sx, sy] of symmetries) {
+        context.save();
+        context.translate(canvas.width / 2, canvas.height / 2);
+        context.rotate(rotation * Math.PI / 180);
+        context.scale(this.scale * sx, this.scale * sy);
+        for (let n = 0; n < 2; n++) {
+          const isFlipped = i % this.flip;
+          const canvasW = canvas.width / 2;
+          const canvasH = canvas.height / 4;
+          let coords0 = this.getCoordinates(canvasW, canvasH, isFlipped ? 1 : 0, false, n % 2 === 0 ? 1 : -1);
+          if (isFlipped) coords0 = this.swapBezierCoords(coords0);
+          let coords1 = this.getCoordinates(canvasW, canvasH, isFlipped ? 1 : 0, false, n % 2 === 0 ? 1 : -1);
+          if (isFlipped) coords1 = this.swapBezierCoords(coords1);
+          const segPoints0 = [];
+          for (let t = 0; t <= 1; t += 1 / samplePoints) {
+            const x = Math.pow(1 - t, 3) * coords0[0] + 3 * Math.pow(1 - t, 2) * t * coords0[2] + 3 * (1 - t) * t * t * coords0[4] + Math.pow(t, 3) * coords0[6];
+            const y = Math.pow(1 - t, 3) * coords0[1] + 3 * Math.pow(1 - t, 2) * t * coords0[3] + 3 * (1 - t) * t * t * coords0[5] + Math.pow(t, 3) * coords0[7];
+            segPoints0.push({ x, y });
+          }
+          const segPoints1 = [];
+          for (let t = 0; t <= 1; t += 1 / samplePoints) {
+            const x = Math.pow(1 - t, 3) * coords1[0] + 3 * Math.pow(1 - t, 2) * t * coords1[2] + 3 * (1 - t) * t * t * coords1[4] + Math.pow(t, 3) * coords1[6];
+            const y = Math.pow(1 - t, 3) * coords1[1] + 3 * Math.pow(1 - t, 2) * t * coords1[3] + 3 * (1 - t) * t * t * coords1[5] + Math.pow(t, 3) * coords1[7];
+            segPoints1.push({ x, y });
+          }
+          const poly = segPoints0.concat(segPoints1.slice().reverse());
+          context.beginPath();
+          context.moveTo(poly[0].x, poly[0].y);
+          for (let j = 1; j < poly.length; j++) {
+            context.lineTo(poly[j].x, poly[j].y);
+          }
+          context.closePath();
+          context.strokeStyle = 'black';
+          context.lineWidth = 1.5;
+          context.stroke();
+        }
+        context.restore();
+      }
+    }
+  }
   constructor(lineWidth, sx, sy, c1x, c1y, c2x, c2y, ex, ey, ox, oy, segs, flip, scale, brushOn, bc1y, bc1x, bc2x, bc2y) {
     this.lineWidth = lineWidth;
     this.start = { x: sx, y: sy };

@@ -52,6 +52,22 @@ function estimateMandalaRegionAreas(mandala, samplePoints = 32) {
 let canvas, context, stage;
 let isPaused = false;
 
+// Generate a color palette for regions (returns array of CSS color strings)
+function getRegionColors(n) {
+  const colors = [];
+  for (let i = 0; i < n; i++) {
+    // Evenly spaced hues, max saturation, higher lightness, alpha 0.35
+    colors.push(`hsla(${Math.round((360 * i) / n)}, 98%, 68%, 0.35)`);
+  }
+  return colors;
+}
+
+// Draw colored overlays for each region (called after mandala is drawn)
+function drawRegionOverlays(mandala, regionAreas, samplePoints = 32) {
+  // Deprecated: now handled by BezierShape.drawColoredRegions
+  return;
+}
+
 function init() {
   canvas = document.getElementById("canvas");
   context = canvas.getContext("2d");
@@ -97,7 +113,14 @@ function onTick() {
     const heuristicDiv = document.getElementById("heuristic-value");
     const reasonsDiv = document.getElementById("heuristic-reasons");
     if (window.mandalas && window.mandalas.length > 0) {
-      const heuristicResult = mandalaHeuristic(true); // pass true for verbose
+      const m = window.mandalas[0];
+      const regionAreas = estimateMandalaRegionAreas(m, 24);
+      // Draw colored overlays for regions using BezierShape logic
+      if (typeof m.drawColoredRegions === 'function') {
+        const regionColors = getRegionColors(m.segments);
+        m.drawColoredRegions(context, regionColors, 24);
+      }
+      const heuristicResult = mandalaHeuristic(true, regionAreas);
       if (heuristicDiv) {
         heuristicDiv.style.display = 'block';
         heuristicDiv.innerHTML = heuristicResult.display;
@@ -148,7 +171,8 @@ function mandalaHeuristic(verbose) {
   let score = 0;
   // Penalize if any region is too small (not colorable)
   let minRegionArea = 0.002; // This is a normalized area; tweak as needed
-  let regionAreas = estimateMandalaRegionAreas(m, 24);
+  // Accept regionAreas as an optional argument for color mapping
+  let regionAreas = arguments.length > 1 && Array.isArray(arguments[1]) ? arguments[1] : estimateMandalaRegionAreas(m, 24);
   let tooSmall = regionAreas.some(a => a < minRegionArea);
   if (tooSmall) {
     value = false;
@@ -182,7 +206,36 @@ function mandalaHeuristic(verbose) {
   let display = `<div style='font-size:2.1em;font-weight:bold;color:${score === 5 ? 'green' : score >= 3 ? 'orange' : 'red'};line-height:1.1;'>${score}/5</div>`;
   display += `<div style='font-size:1.1em;'><b>Status:</b> <span style='color:${value ? 'green' : 'red'}'>${value ? 'Great!' : 'Not great'}</span></div>`;
   if (verbose) {
-    display += `<div style='font-size:0.98em;'><small>Segments: ${m.segments}, Scale: ${m.scale.toFixed(2)}, c1: (${m.control1.x.toFixed(2)},${m.control1.y.toFixed(2)}), c2: (${m.control2.x.toFixed(2)},${m.control2.y.toFixed(2)})</small></div>`;
+    const safeNum = v => (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '?';
+    const segs = (typeof m.segments === 'number') ? m.segments : '?';
+    const scale = safeNum(m.scale);
+    const c1xVal = m.control1 && typeof m.control1.x === 'number' ? m.control1.x : undefined;
+    const c1yVal = m.control1 && typeof m.control1.y === 'number' ? m.control1.y : undefined;
+    const c2xVal = m.control2 && typeof m.control2.x === 'number' ? m.control2.x : undefined;
+    const c2yVal = m.control2 && typeof m.control2.y === 'number' ? m.control2.y : undefined;
+    const c1x = safeNum(c1xVal);
+    const c1y = safeNum(c1yVal);
+    const c2x = safeNum(c2xVal);
+    const c2y = safeNum(c2yVal);
+    const c1xAbs = safeNum(Math.abs(c1xVal));
+    const c1yAbs = safeNum(Math.abs(c1yVal));
+    const c2xAbs = safeNum(Math.abs(c2xVal));
+    const c2yAbs = safeNum(Math.abs(c2yVal));
+    const spread = safeNum(Math.sqrt(Math.pow((c1xVal ?? 0) - (c2xVal ?? 0), 2) + Math.pow((c1yVal ?? 0) - (c2yVal ?? 0), 2)));
+    const minRegionArea = (Array.isArray(regionAreas) && regionAreas.length) ? safeNum(Math.min(...regionAreas)) : '?';
+    // Color each region area value to match the overlay
+    let areaSpans = '?';
+    if (Array.isArray(regionAreas) && regionAreas.length) {
+      const colors = getRegionColors(regionAreas.length);
+      areaSpans = regionAreas.map((a, i) => `<span style="color:${colors[i].replace(/, 0\.35\)/, ', 1)')}">${safeNum(a)}</span>`).join(", ");
+    }
+    display += `<div style='font-size:0.98em;'><small>
+      Segments: ${segs}, Scale: ${scale}<br>
+      c1: (${c1x}, ${c1y}), c2: (${c2x}, ${c2y})<br>
+      |c1|: (${c1xAbs}, ${c1yAbs}), |c2|: (${c2xAbs}, ${c2yAbs})<br>
+      Spread: ${spread}, Min region area: ${minRegionArea}<br>
+      All region areas: [${areaSpans}]
+    </small></div>`;
   }
   return { value, score, display, reasons };
 }
